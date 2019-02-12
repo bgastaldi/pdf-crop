@@ -10,8 +10,6 @@ import java.util.UUID;
 
 public class Main {
 
-
-
     public static void main(String[] args) throws Exception {
         try {
             String path = args[0];
@@ -22,35 +20,35 @@ public class Main {
             float height = Float.parseFloat(args[4]) * cmToPs;
             int rot = args.length > 5 ? Integer.parseInt(args[5]) : 0;
 
-            PdfRectangle rect = new PdfRectangle(x, y, width + x, height + y);
-
-            String outFile = getUniqueFileName("/tmp", "pdf");
-
             PdfReader reader = new PdfReader(path);
             int n = reader.getNumberOfPages();
 
-            if (n != 1) {
-                System.err.println("File has more than one page (" + n + ")");
+            for (int i = 1; i <= n; i++) {
+
+                reader = new PdfReader(path);
+                PdfRectangle rect = new PdfRectangle(x, y, width + x, height + y);
+
+                String outFile = getUniqueFileName("tmp/", "pdf");
+                reader.selectPages(String.valueOf(i));
+
+                PdfDictionary pageDict = reader.getPageN(1);
+                pageDict.put(PdfName.CROPBOX, rect);
+                pageDict.put(PdfName.MEDIABOX, rect);
+
+                PdfNumber rotate = pageDict.getAsNumber(PdfName.ROTATE);
+                if (rotate == null) {
+                    pageDict.put(PdfName.ROTATE, new PdfNumber(rot));
+                } else {
+                    pageDict.put(PdfName.ROTATE, new PdfNumber((rotate.intValue() + rot) % 360));
+                }
+
+                PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(outFile));
+                stamper.close();
+
+                System.out.println(outFile);
+                reader.close();
             }
-
-            reader.selectPages(String.valueOf(1));
-
-            PdfDictionary pageDict = reader.getPageN(1);
-            pageDict.put(PdfName.CROPBOX, rect);
-            pageDict.put(PdfName.MEDIABOX, rect);
-
-            PdfNumber rotate = pageDict.getAsNumber(PdfName.ROTATE);
-            if (rotate == null) {
-                pageDict.put(PdfName.ROTATE, new PdfNumber(rot));
-            } else {
-                pageDict.put(PdfName.ROTATE, new PdfNumber((rotate.intValue() + rot) % 360));
-            }
-
-            PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(outFile));
-            stamper.close();
             reader.close();
-
-            System.out.println(outFile);
         } catch (DocumentException | IOException err) {
             throw err;
         }
